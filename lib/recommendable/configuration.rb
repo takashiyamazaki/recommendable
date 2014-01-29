@@ -46,6 +46,9 @@ module Recommendable
 
     attr_accessor :ratable_classes, :user_class
 
+    # Custom Hash. 
+    attr_accessor :genre_type_weights
+
     # Default values
     def initialize
       @redis                    = Redis.new
@@ -55,6 +58,7 @@ module Recommendable
       @nearest_neighbors        = nil
       @furthest_neihbors        = nil
       @recommendations_to_store = 100
+      @genre_type_weights = Hash.new
     end
 
     def queue_name

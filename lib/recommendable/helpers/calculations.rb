@@ -17,21 +17,23 @@ module Recommendable
 
           similarity = liked_count = disliked_count = 0
           in_common = Recommendable.config.ratable_classes.each do |klass|
+            genre_type_weight = Recommendable.config.genre_type_weights.fetch(klass.to_s.to_sym, 1).to_f
+
             liked_set = Recommendable::Helpers::RedisKeyMapper.liked_set_for(klass, user_id)
             other_liked_set = Recommendable::Helpers::RedisKeyMapper.liked_set_for(klass, other_user_id)
             disliked_set = Recommendable::Helpers::RedisKeyMapper.disliked_set_for(klass, user_id)
             other_disliked_set = Recommendable::Helpers::RedisKeyMapper.disliked_set_for(klass, other_user_id)
 
             # Agreements
-            similarity += Recommendable.redis.sinter(liked_set, other_liked_set).size
-            similarity += Recommendable.redis.sinter(disliked_set, other_disliked_set).size
+            similarity += Recommendable.redis.sinter(liked_set, other_liked_set).size * genre_type_weight
+            similarity += Recommendable.redis.sinter(disliked_set, other_disliked_set).size * genre_type_weight
 
             # Disagreements
-            similarity -= Recommendable.redis.sinter(liked_set, other_disliked_set).size
-            similarity -= Recommendable.redis.sinter(disliked_set, other_liked_set).size
+            similarity -= Recommendable.redis.sinter(liked_set, other_disliked_set).size * genre_type_weight
+            similarity -= Recommendable.redis.sinter(disliked_set, other_liked_set).size * genre_type_weight
 
-            liked_count += Recommendable.redis.scard(liked_set)
-            disliked_count += Recommendable.redis.scard(disliked_set)
+            liked_count += Recommendable.redis.scard(liked_set) * genre_type_weight
+            disliked_count += Recommendable.redis.scard(disliked_set) * genre_type_weight
           end
 
           similarity / (liked_count + disliked_count).to_f

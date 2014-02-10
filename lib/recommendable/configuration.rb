@@ -47,7 +47,8 @@ module Recommendable
     attr_accessor :ratable_classes, :user_class
 
     # Custom Hash. 
-    attr_accessor :genre_type_weights
+    attr_accessor :genre_type_weights    # ジャンル種別の重み付け
+    attr_accessor :chara_fever_weights   # キャラ・フィーバー
 
     # Default values
     def initialize
@@ -59,6 +60,7 @@ module Recommendable
       @furthest_neihbors        = nil
       @recommendations_to_store = 100
       @genre_type_weights = Hash.new
+      @chara_fever_weights = Array.new(5, 1)
     end
 
     def queue_name

@@ -19,6 +19,16 @@ module Recommendable
         true
       end
 
+      # 重み付けLike
+      def weighted_like(obj, weight)
+        raise(ArgumentError, 'Object has not been declared ratable.') unless obj.respond_to?(:recommendable?) && obj.recommendable?
+
+        Recommendable.redis.zadd(Recommendable::Helpers::RedisKeyMapper.weighted_liked_set_for(obj.class, id), weight.to_f, obj.id)
+        Recommendable.redis.zadd(Recommendable::Helpers::RedisKeyMapper.weighted_liked_by_set_for(obj.class, obj.id), weight.to_f, id)
+
+        true
+      end
+
       # Check whether the user has liked an object.
       #
       # @param [Object] obj the object in question

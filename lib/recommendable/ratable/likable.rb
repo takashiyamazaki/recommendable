@@ -21,6 +21,19 @@ module Recommendable
       def liked_by_ids
         Recommendable.redis.smembers(Recommendable::Helpers::RedisKeyMapper.liked_by_set_for(self.class, id))
       end
+
+      # Custom method.
+      def weighted_liked_by
+        Recommendable.query(Recommendable.config.user_class, weighted_liked_by_ids)
+      end
+
+      def weighted_liked_by_ids
+        Recommendable.redis.zrange(Recommendable::Helpers::RedisKeyMapper.weighted_liked_by_set_for(self.class, id), 0, -1)
+      end
+
+      def weighted_liked_by_count
+        Recommendable.redis.zcard(Recommendable::Helpers::RedisKeyMapper.weighted_liked_by_set_for(self.class, id))
+      end
     end
   end
 end

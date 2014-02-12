@@ -102,4 +102,13 @@ class RedisKeyMapperTest < MiniTest::Unit::TestCase
     assert_equal Recommendable::Helpers::RedisKeyMapper.score_set_for(Car), 'recommendable:cars:scores'
   end
 
+  ### カステムテスト
+  def test_output_of_weighted_liked_set_for
+    assert_equal Recommendable::Helpers::RedisKeyMapper.weighted_liked_set_for(Movie, 1), 'recommendable:users:1:weighted_liked_movies'
+  end
+
+  def test_output_of_weighted_likeed_by_set_for
+    assert_equal Recommendable::Helpers::RedisKeyMapper.weighted_liked_by_set_for(Movie, 1), 'recommendable:movies:1:weighted_liked_by'
+  end
+
 end

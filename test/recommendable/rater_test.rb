@@ -34,6 +34,17 @@ class RaterTest < MiniTest::Unit::TestCase
     end
   end
 
+  # Custom Test
+  def test_that_weighted_unrate_removes_any_rating
+    @movie = Factory(:movie)
+    action = "weighted_like"
+    @user.send(action, @movie, 1.0)
+    assert @user.send("#{action.pluralize}?", @movie)
+
+    @user.unrate(@movie)
+    refute @user.send("#{action.pluralize}?", @movie)
+  end  
+
   def teardown
     Recommendable.redis.flushdb
   end

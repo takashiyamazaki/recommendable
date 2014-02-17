@@ -37,6 +37,10 @@ module Recommendable
         Recommendable.redis.sismember(Recommendable::Helpers::RedisKeyMapper.liked_set_for(obj.class, id), obj.id)
       end
 
+      def weighted_likes?(obj)
+        !!Recommendable.redis.zscore(Recommendable::Helpers::RedisKeyMapper.weighted_liked_set_for(obj.class, id), obj.id)
+      end
+
       # Unlike an object. This removes the object from a user's set of likes.
       #
       # @param [Object] obj the object to be unliked
@@ -52,12 +56,25 @@ module Recommendable
         true
       end
 
+      def weighted_unlike(obj)
+        return unless weighted_likes?(obj)
+
+        Recommendable.redis.zrem(Recommendable::Helpers::RedisKeyMapper.weighted_liked_set_for(obj.class, id), obj.id)
+        Recommendable.redis.zrem(Recommendable::Helpers::RedisKeyMapper.weighted_liked_by_set_for(obj.class, obj.id), id)
+
+        true
+      end      
+
       # Retrieve an array of objects the user has liked
       #
       # @return [Array] an array of records
       def likes
         Recommendable.config.ratable_classes.map { |klass| liked_for(klass) }.flatten
       end
+
+      def weighted_likes
+        Recommendable.config.ratable_classes.map { |klass| weighted_liked_for(klass) }.flatten
+      end      
 
       # Retrieve an array of objects both this user and another user have liked
       #
@@ -66,12 +83,22 @@ module Recommendable
         Recommendable.config.ratable_classes.map { |klass| liked_in_common_with(klass, user) }.flatten
       end
 
+      def weighted_likes_in_common_with(user)
+        Recommendable.config.ratable_classes.map { |klass| weighted_liked_in_common_with(klass, user) }.flatten
+      end
+
       # Get the number of items the user has liked
       #
       # @return [Fixnum] the number of liked items
       def likes_count
         Recommendable.config.ratable_classes.inject(0) do |sum, klass|
           sum + liked_count_for(klass)
+        end
+      end
+
+      def weighted_likes_count
+        Recommendable.config.ratable_classes.inject(0) do |sum, klass|
+          sum + weighted_liked_count_for(klass)
         end
       end
 
@@ -88,6 +115,12 @@ module Recommendable
         ids
       end
 
+      def weighted_liked_ids_for(klass)
+        ids = Recommendable.redis.zrange(Recommendable::Helpers::RedisKeyMapper.weighted_liked_set_for(klass, id), 0, -1)
+        ids.map!(&:to_i) if [:active_record, :data_mapper, :sequel].include?(Recommendable.config.orm)
+        ids
+      end
+
       # Fetch records belonging to a passed class that the user has liked
       #
       # @param [String, Symbol, Class] the class for which you want liked records
@@ -97,6 +130,10 @@ module Recommendable
         Recommendable.query(klass, liked_ids_for(klass))
       end
 
+     def weighted_liked_for(klass)
+        Recommendable.query(klass, weighted_liked_ids_for(klass))
+      end      
+
       # Get the number of items belonging to a passed class that the user has liked
       #
       # @param [String, Symbol, Class] the class for which you want a count of likes
@@ -104,6 +141,10 @@ module Recommendable
       # @private
       def liked_count_for(klass)
         Recommendable.redis.scard(Recommendable::Helpers::RedisKeyMapper.liked_set_for(klass, id))
+      end
+
+      def weighted_liked_count_for(klass)
+        Recommendable.redis.zcard(Recommendable::Helpers::RedisKeyMapper.weighted_liked_set_for(klass, id))
       end
 
       # Get a list of records that both this user and a passed user have liked
@@ -116,6 +157,10 @@ module Recommendable
         Recommendable.query(klass, liked_ids_in_common_with(klass, user))
       end
 
+      def weighted_liked_in_common_with(klass, user)
+        Recommendable.query(klass, weighted_liked_ids_in_common_with(klass, user))
+      end      
+
       # Get a list of IDs for records that both this user and a passed user have
       # liked
       #
@@ -126,6 +171,16 @@ module Recommendable
       def liked_ids_in_common_with(klass, user_id)
         user_id = user_id.id if user_id.is_a?(Recommendable.config.user_class)
         Recommendable.redis.sinter(Recommendable::Helpers::RedisKeyMapper.liked_set_for(klass, id), Recommendable::Helpers::RedisKeyMapper.liked_set_for(klass, user_id))
+      end
+
+      def weighted_liked_ids_in_common_with(klass, user_id)
+        user_id = user_id.id if user_id.is_a?(Recommendable.config.user_class)
+        zinter_temp_set = Recommendable::Helpers::RedisKeyMapper.zinter_temp_set_for(klass, id)
+        Recommendable.redis.zinterstore(zinter_temp_set, [Recommendable::Helpers::RedisKeyMapper.weighted_liked_set_for(klass, id), Recommendable::Helpers::RedisKeyMapper.weighted_liked_set_for(klass, user_id)])
+        ids = Recommendable.redis.zrange(zinter_temp_set, 0, -1)
+        ids.map!(&:to_i) if [:active_record, :data_mapper, :sequel].include?(Recommendable.config.orm)
+        Recommendable.redis.del(zinter_temp_set)
+        ids
       end
     end
   end

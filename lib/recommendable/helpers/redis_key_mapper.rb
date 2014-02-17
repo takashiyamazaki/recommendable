@@ -32,6 +32,10 @@ module Recommendable
           [redis_namespace, ratable_namespace(klass), id, 'weighted_liked_by'].compact.join(':')
         end
 
+        def zinter_temp_set_for(klass, id)
+          [redis_namespace, ratable_namespace(klass), id, 'zinter_temp'].compact.join(':')
+        end        
+
         private
 
         def redis_namespace

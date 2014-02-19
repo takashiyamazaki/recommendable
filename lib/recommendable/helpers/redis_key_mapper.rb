@@ -36,6 +36,10 @@ module Recommendable
           [redis_namespace, ratable_namespace(klass), id, 'zinter_temp'].compact.join(':')
         end        
 
+        def zunion_temp_set_for(klass, id)
+          [redis_namespace, ratable_namespace(klass), id, 'zunion_temp'].compact.join(':')
+        end        
+
         private
 
         def redis_namespace

@@ -39,6 +39,32 @@ module Recommendable
           similarity / (liked_count + disliked_count).to_f
         end
 
+        def weighted_similarity_between(user_id, other_user_id)
+          user_id = user_id.to_s
+          other_user_id = other_user_id.to_s
+
+          similarity = liked_count = disliked_count = 0
+          in_common = Recommendable.config.ratable_classes.each do |klass|
+            genre_type_weight = Recommendable.config.genre_type_weights.fetch(klass.to_s.to_sym, 1).to_f
+
+            weighted_liked_zset = Recommendable::Helpers::RedisKeyMapper.weighted_liked_set_for(klass, user_id)
+            other_weighted_liked_zset = Recommendable::Helpers::RedisKeyMapper.weighted_liked_set_for(klass, other_user_id)
+            zinter_temp_zset = Recommendable::Helpers::RedisKeyMapper.zinter_temp_set_for(klass, user_id)
+
+            # Agreements
+            Recommendable.redis.zinterstore(zinter_temp_zset, [weighted_liked_zset, other_weighted_liked_zset], :aggregate => "sum")
+            common_ids_with_score = Recommendable.redis.zrange(zinter_temp_zset, 0, -1, :with_scores => true)
+
+            similarity += common_ids_with_score.inject(0){|sum, id_with_score| sum + (id_with_score[1].to_f / 2.0)} * genre_type_weight
+
+            liked_count += Recommendable.redis.zcard(weighted_liked_zset) * Recommendable.config.chara_fever_max_weight * genre_type_weight
+
+            Recommendable.redis.del(zinter_temp_zset)
+          end
+
+          similarity / (liked_count).to_f
+        end        
+
         # Used internally to update the similarity values between this user and all
         # other users. This is called by the background worker.
         def update_similarities_for(user_id)
@@ -81,6 +107,50 @@ module Recommendable
 
           true
         end
+
+        def update_weighted_similarities_for(user_id)
+          user_id = user_id.to_s # For comparison. Redis returns all set members as strings.
+          similarity_set = Recommendable::Helpers::RedisKeyMapper.similarity_set_for(user_id)
+
+          # Only calculate similarities for users who have rated the items that
+          # this user has rated
+          relevant_user_ids = Recommendable.config.ratable_classes.inject([]) do |memo, klass|
+            weighted_liked_zset = Recommendable::Helpers::RedisKeyMapper.weighted_liked_set_for(klass, user_id)
+
+            item_ids = Recommendable.redis.zrange(weighted_liked_zset, 0, -1)
+
+            unless item_ids.empty?
+              zsets = item_ids.map do |id|
+                weighted_liked_by_set = Recommendable::Helpers::RedisKeyMapper.weighted_liked_by_set_for(klass, id)
+
+                weighted_liked_by_set
+              end
+
+              zunion_temp_zset = Recommendable::Helpers::RedisKeyMapper.zinter_temp_set_for(klass, user_id)
+              Recommendable.redis.zunionstore(zunion_temp_zset, zsets)
+              zunion_set = Recommendable.redis.zrange(zunion_temp_zset, 0, -1)
+              Recommendable.redis.del(zunion_temp_zset)
+
+              memo | zunion_set
+            else
+              memo
+            end
+          end
+
+          relevant_user_ids.each do |id|
+            next if id == user_id # Skip comparing with self.
+            Recommendable.redis.zadd(similarity_set, weighted_similarity_between(user_id, id), id)
+          end
+
+          if knn = Recommendable.config.nearest_neighbors
+            length = Recommendable.redis.zcard(similarity_set)
+            kfn = Recommendable.config.furthest_neighbors || 0
+
+            Recommendable.redis.zremrangebyrank(similarity_set, kfn, length - knn - 1)
+          end
+
+          true
+        end        
 
         # Used internally to update this user's prediction values across all
         # recommendable types. This is called by the background worker.

@@ -48,7 +48,8 @@ module Recommendable
 
     # Custom Hash. 
     attr_accessor :genre_type_weights    # ジャンル種別の重み付け
-    attr_accessor :chara_fever_weights   # キャラ・フィーバー
+    attr_accessor :chara_fever_weights   # キャラ・フィーバーの重み付け
+    attr_accessor :chara_fever_max_weight # キャラ・フィーバーの重みの最大値
 
     # Default values
     def initialize
@@ -61,6 +62,7 @@ module Recommendable
       @recommendations_to_store = 100
       @genre_type_weights = Hash.new
       @chara_fever_weights = Array.new(5, 1)
+      @chara_fever_max_weight = @chara_fever_weights.max
     end
 
     def queue_name

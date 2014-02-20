@@ -110,6 +110,17 @@ class RecommenderTest < MiniTest::Unit::TestCase
     refute_includes @user2.similar_raters(5).map(&:id), id
   end
 
+  # Custom Test
+  def test_similar_raters_returns_sorted_similar_users
+    similar_raters_with_score = @user.similar_raters_with_score(5)
+
+    assert_equal similar_raters_with_score[0], [@user2, 1.0]
+    assert_equal similar_raters_with_score[1], [@user4, 0.25]
+    assert_equal similar_raters_with_score[2], [@user3, 0]
+    assert_equal similar_raters_with_score[3], [@user1, -0.25]
+    assert_equal similar_raters_with_score[4], [@user5, -1.0]
+  end
+
   def teardown
     Recommendable.redis.flushdb
   end

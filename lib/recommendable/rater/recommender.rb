@@ -11,6 +11,13 @@ module Recommendable
         Recommendable.query(self.class, ids).sort_by { |user| ids.index(user.id.to_s) }
       end
 
+      def similar_raters_with_score(count = 10, offset = 0)
+        ids_with_score = Recommendable.redis.zrevrange(Recommendable::Helpers::RedisKeyMapper.similarity_set_for(id), offset, count - 1, :with_scores => true)
+        trans_ids_with_score = ids_with_score.transpose
+        trans_ids_with_score[0] = Recommendable.query(self.class, trans_ids_with_score[0]).sort_by { |user| trans_ids_with_score[0].index(user.id.to_s) }
+        trans_ids_with_score.transpose
+      end
+
       private
 
       # Fetch a list of recommendations for a passed class.

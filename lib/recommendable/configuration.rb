@@ -61,8 +61,7 @@ module Recommendable
       @furthest_neihbors        = nil
       @recommendations_to_store = 100
       @genre_type_weights = Hash.new
-      @chara_fever_weights = Array.new(5, 1)
-      @chara_fever_max_weight = @chara_fever_weights.max
+      @chara_fever_max_weight = 1
     end
 
     def queue_name

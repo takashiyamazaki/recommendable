@@ -82,11 +82,11 @@ class CalculationsTest < MiniTest::Unit::TestCase
     [@book4, @book5, @book6].each { |obj| @like_user4.like(obj) }
     [@movie1, @movie2, @book4, @book5, @book6].each { |obj| @like_user5.like(obj) }
 
-    assert_equal Recommendable::Helpers::Calculations.similarity_between(@weight_user.id, @like_user1.id), 1.0
-    assert_equal Recommendable::Helpers::Calculations.similarity_between(@weight_user.id, @like_user2.id), 0.9696969696969697
-    assert_equal Recommendable::Helpers::Calculations.similarity_between(@weight_user.id, @like_user3.id), 0.9090909090909091
-    assert_equal Recommendable::Helpers::Calculations.similarity_between(@weight_user.id, @like_user4.id), 0.09090909090909091
-    assert_equal Recommendable::Helpers::Calculations.similarity_between(@weight_user.id, @like_user5.id), 0.69696969696969697
+    assert_equal Recommendable::Helpers::Calculations.similarity_between(@weight_user.id, @like_user1.id), 5.5
+    assert_equal Recommendable::Helpers::Calculations.similarity_between(@weight_user.id, @like_user2.id), 5.333333333333333
+    assert_equal Recommendable::Helpers::Calculations.similarity_between(@weight_user.id, @like_user3.id), 5.0
+    assert_equal Recommendable::Helpers::Calculations.similarity_between(@weight_user.id, @like_user4.id), 0.5
+    assert_equal Recommendable::Helpers::Calculations.similarity_between(@weight_user.id, @like_user5.id), 3.8333333333333335
 
     Recommendable.config.genre_type_weights = {}
   end
@@ -143,11 +143,11 @@ class CalculationsTest < MiniTest::Unit::TestCase
     [@movie1, @movie2, @movie3, @book1].each { |obj| @like_user4.weighted_like(obj, 0.5) }
     [@movie1, @movie2, @movie3, @book1].each { |obj| @like_user5.weighted_like(obj, 0.1) }
 
-    assert_equal Recommendable::Helpers::Calculations.weighted_similarity_between(@weight_user.id, @like_user1.id), 1.0
-    assert_equal Recommendable::Helpers::Calculations.weighted_similarity_between(@weight_user.id, @like_user2.id), 0.65625
-    assert_equal Recommendable::Helpers::Calculations.weighted_similarity_between(@weight_user.id, @like_user3.id), 0.34375
-    assert_equal Recommendable::Helpers::Calculations.weighted_similarity_between(@weight_user.id, @like_user4.id), 0.7265625
-    assert_equal Recommendable::Helpers::Calculations.weighted_similarity_between(@weight_user.id, @like_user5.id), 0.5328125
+    assert_equal Recommendable::Helpers::Calculations.weighted_similarity_between(@weight_user.id, @like_user1.id), 6.4
+    assert_equal Recommendable::Helpers::Calculations.weighted_similarity_between(@weight_user.id, @like_user2.id), 4.2
+    assert_equal Recommendable::Helpers::Calculations.weighted_similarity_between(@weight_user.id, @like_user3.id), 2.2
+    assert_equal Recommendable::Helpers::Calculations.weighted_similarity_between(@weight_user.id, @like_user4.id), 4.65
+    assert_equal Recommendable::Helpers::Calculations.weighted_similarity_between(@weight_user.id, @like_user5.id), 3.41
   end
 
   def test_genre_type_weighting_and_each_genre_weighting_similarity_update_crrectly_multi_case
@@ -166,11 +166,11 @@ class CalculationsTest < MiniTest::Unit::TestCase
 
     Recommendable::Helpers::Calculations.update_weighted_similarities_for(@weight_user.id)
 
-    assert_equal Recommendable::Helpers::Calculations.weighted_similarity_between(@weight_user.id, @like_user1.id), 1.0
-    assert_equal Recommendable::Helpers::Calculations.weighted_similarity_between(@weight_user.id, @like_user2.id), 0.65625
-    assert_equal Recommendable::Helpers::Calculations.weighted_similarity_between(@weight_user.id, @like_user3.id), 0.34375
-    assert_equal Recommendable::Helpers::Calculations.weighted_similarity_between(@weight_user.id, @like_user4.id), 0.7265625
-    assert_equal Recommendable::Helpers::Calculations.weighted_similarity_between(@weight_user.id, @like_user5.id), 0.5328125
+    assert_equal Recommendable::Helpers::Calculations.weighted_similarity_between(@weight_user.id, @like_user1.id), 6.4
+    assert_equal Recommendable::Helpers::Calculations.weighted_similarity_between(@weight_user.id, @like_user2.id), 4.2
+    assert_equal Recommendable::Helpers::Calculations.weighted_similarity_between(@weight_user.id, @like_user3.id), 2.2
+    assert_equal Recommendable::Helpers::Calculations.weighted_similarity_between(@weight_user.id, @like_user4.id), 4.65
+    assert_equal Recommendable::Helpers::Calculations.weighted_similarity_between(@weight_user.id, @like_user5.id), 3.41
   end
 
   def teardown

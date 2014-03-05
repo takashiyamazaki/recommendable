@@ -32,8 +32,8 @@ module Recommendable
             similarity -= Recommendable.redis.sinter(liked_set, other_disliked_set).size * genre_type_weight
             similarity -= Recommendable.redis.sinter(disliked_set, other_liked_set).size * genre_type_weight
 
-            liked_count += Recommendable.redis.scard(liked_set) * genre_type_weight
-            disliked_count += Recommendable.redis.scard(disliked_set) * genre_type_weight
+            liked_count += Recommendable.redis.scard(liked_set)
+            disliked_count += Recommendable.redis.scard(disliked_set)
           end
 
           similarity / (liked_count + disliked_count).to_f
@@ -57,7 +57,7 @@ module Recommendable
 
             similarity += common_ids_with_score.inject(0){|sum, id_with_score| sum + (id_with_score[1].to_f / 2.0)} * genre_type_weight
 
-            liked_count += Recommendable.redis.zcard(weighted_liked_zset) * Recommendable.config.chara_fever_max_weight * genre_type_weight
+            liked_count += Recommendable.redis.zcard(weighted_liked_zset) * Recommendable.config.chara_fever_max_weight
 
             Recommendable.redis.del(zinter_temp_zset)
           end

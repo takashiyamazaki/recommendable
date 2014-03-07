@@ -55,14 +55,16 @@ module Recommendable
             Recommendable.redis.zinterstore(zinter_temp_zset, [weighted_liked_zset, other_weighted_liked_zset], :aggregate => "sum")
             common_ids_with_score = Recommendable.redis.zrange(zinter_temp_zset, 0, -1, :with_scores => true)
 
-            similarity += common_ids_with_score.inject(0){|sum, id_with_score| sum + (id_with_score[1].to_f / 2.0)} * genre_type_weight
+            genre_similarity = common_ids_with_score.inject(0){|sum, id_with_score| sum + (id_with_score[1].to_f / 2.0)} * genre_type_weight
 
-            liked_count += Recommendable.redis.zcard(weighted_liked_zset) * Recommendable.config.chara_fever_max_weight
+            liked_count = Recommendable.redis.zcard(weighted_liked_zset) * Recommendable.config.chara_fever_max_weight
 
             Recommendable.redis.del(zinter_temp_zset)
+
+            similarity += genre_similarity / liked_count.to_f if liked_count != 0
           end
 
-          similarity / (liked_count).to_f
+          similarity
         end        
 
         # Used internally to update the similarity values between this user and all

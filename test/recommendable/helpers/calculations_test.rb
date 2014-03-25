@@ -68,7 +68,7 @@ class CalculationsTest < MiniTest::Unit::TestCase
   end
 
   ### Custom Test
-    def test_genre_type_weighting_similarity_between_calculates_crrectly
+  def test_genre_type_weighting_similarity_between_calculates_crrectly
     Recommendable.config.genre_type_weights = {Movie: 10, Book: 1}
 
     # custom user for weight
@@ -171,6 +171,41 @@ class CalculationsTest < MiniTest::Unit::TestCase
     assert_equal Recommendable::Helpers::Calculations.weighted_similarity_between(@weight_user.id, @like_user3.id), 3.8333333333333335
     assert_equal Recommendable::Helpers::Calculations.weighted_similarity_between(@weight_user.id, @like_user4.id), 7.875
     assert_equal Recommendable::Helpers::Calculations.weighted_similarity_between(@weight_user.id, @like_user5.id), 5.775
+  end
+
+  def test_each_genre_weighting_similarity_between_for_unregistered_calculates_crrectly_single_case
+    # custom like_user
+    5.times  { |x| instance_variable_set(:"@like_user#{x+1}",  Factory(:user))  }
+    [@movie1, @movie2, @movie3].each { |obj| @like_user1.weighted_like(obj, 1.0) }
+    [@movie1, @movie2].each { |obj| @like_user2.weighted_like(obj, 1.0) }
+    [@movie1].each { |obj| @like_user3.weighted_like(obj, 1.0) }
+    [@movie1, @movie2, @movie3].each { |obj| @like_user4.weighted_like(obj, 0.5) }
+    [@movie1, @movie2, @movie3].each { |obj| @like_user5.weighted_like(obj, 0.1) }
+
+    assert_equal Recommendable::Helpers::Calculations.weighted_similarity_between_for_unregistered(9999, [@movie1.id, @movie2.id], Movie, 1.0, @like_user1.id), 1.0
+    # assert_equal Recommendable::Helpers::Calculations.weighted_similarity_between_for_unregistered(@weight_user.id, @like_user2.id), 0.6666666666666666
+    # assert_equal Recommendable::Helpers::Calculations.weighted_similarity_between_for_unregistered(@weight_user.id, @like_user3.id), 0.3333333333333333
+    # assert_equal Recommendable::Helpers::Calculations.weighted_similarity_between_for_unregistered(@weight_user.id, @like_user4.id), 0.75
+    # assert_equal Recommendable::Helpers::Calculations.weighted_similarity_between_for_unregistered(@weight_user.id, @like_user5.id), 0.55
+  end
+
+  def test_genre_type_weighting_and_each_genre_weighting_similarity_getting_crrectly_multi_case
+    Recommendable.config.genre_type_weights = {Movie: 10, Book: 1}
+
+    # custom like_user
+    5.times  { |x| instance_variable_set(:"@like_user#{x+1}",  Factory(:user))  }
+    [@movie1, @movie2, @movie3, @book1, @book2].each { |obj| @like_user1.weighted_like(obj, 1.0) }
+    [@movie1, @movie2, @book1].each { |obj| @like_user2.weighted_like(obj, 1.0) }
+    [@movie1, @book1].each { |obj| @like_user3.weighted_like(obj, 1.0) }
+    [@movie1, @movie2, @movie3, @book1].each { |obj| @like_user4.weighted_like(obj, 0.5) }
+    [@movie1, @movie2, @movie3, @book1].each { |obj| @like_user5.weighted_like(obj, 0.1) }
+
+    result = Recommendable::Helpers::Calculations.get_weighted_similarities_for_unregistered_user(9999, [@movie1.id, @movie2.id], Movie, 0.5)
+    assert_includes result , [@like_user1, 7.5]
+    assert_includes result , [@like_user2, 7.5]
+    assert_includes result , [@like_user3, 3.75]
+    assert_includes result , [@like_user4, 5]
+    assert_includes result , [@like_user5, 3]
   end
 
   def teardown

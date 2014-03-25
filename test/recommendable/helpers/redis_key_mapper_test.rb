@@ -111,4 +111,16 @@ class RedisKeyMapperTest < MiniTest::Unit::TestCase
     assert_equal Recommendable::Helpers::RedisKeyMapper.weighted_liked_by_set_for(Movie, 1), 'recommendable:movies:1:weighted_liked_by'
   end
 
+  def test_output_of_unregistered_weighted_liked_set_for
+    assert_equal Recommendable::Helpers::RedisKeyMapper.unregistered_weighted_liked_set_for(Movie, 1), 'recommendable:unregistered_users:1:weighted_liked_movies'
+  end
+
+  def test_output_of_unregistered_similarity_set_for
+    assert_equal Recommendable::Helpers::RedisKeyMapper.unregistered_similarity_set_for(1), 'recommendable:unregistered_users:1:similarities'
+  end
+
+  def test_output_of_unregistered_zinter_temp_set_for
+    assert_equal Recommendable::Helpers::RedisKeyMapper.unregistered_zinter_temp_set_for(Movie, 1), 'recommendable:movies:1:unregistered_zinter_temp'
+  end
+  
 end

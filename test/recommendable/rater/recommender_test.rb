@@ -34,6 +34,9 @@ class RecommenderTest < MiniTest::Unit::TestCase
 
     Recommendable::Helpers::Calculations.update_similarities_for(@user.id)
     Recommendable::Helpers::Calculations.update_recommendations_for(@user.id)
+    
+    # reset genre_type_weights
+    Recommendable.config.genre_type_weights = {}
   end
 
   def test_similar_raters_returns_sorted_similar_users

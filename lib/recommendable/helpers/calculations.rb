@@ -67,6 +67,38 @@ module Recommendable
           similarity
         end        
 
+        def weighted_similarity_between_for_unregistered(unregistered_user_id, like_genre_ids, matching_klass, like_weight, other_user_id)
+          unregistered_user_id = unregistered_user_id.to_s
+          other_user_id = other_user_id.to_s
+
+          similarity = liked_count = disliked_count = 0
+          genre_type_weight = Recommendable.config.genre_type_weights.fetch(matching_klass.to_s.to_sym, 1).to_f
+
+          unregistered_weighted_liked_zset = Recommendable::Helpers::RedisKeyMapper.unregistered_weighted_liked_set_for(matching_klass, unregistered_user_id)
+          # 値の格納
+          like_genre_ids.each do |genre_id|
+            Recommendable.redis.zadd(unregistered_weighted_liked_zset, like_weight, genre_id)
+          end
+
+          other_weighted_liked_zset = Recommendable::Helpers::RedisKeyMapper.weighted_liked_set_for(matching_klass, other_user_id)
+          zinter_temp_zset = Recommendable::Helpers::RedisKeyMapper.zinter_temp_set_for(matching_klass, unregistered_user_id)
+
+          # Agreements
+          Recommendable.redis.zinterstore(zinter_temp_zset, [unregistered_weighted_liked_zset, other_weighted_liked_zset], :aggregate => "sum")
+          common_ids_with_score = Recommendable.redis.zrange(zinter_temp_zset, 0, -1, :with_scores => true)
+
+          genre_similarity = common_ids_with_score.inject(0){|sum, id_with_score| sum + (id_with_score[1].to_f / 2.0)} * genre_type_weight
+
+          liked_count = Recommendable.redis.zcard(unregistered_weighted_liked_zset) * Recommendable.config.chara_fever_max_weight
+
+          Recommendable.redis.del(zinter_temp_zset)
+          Recommendable.redis.del(unregistered_weighted_liked_zset)
+
+          similarity += genre_similarity / liked_count.to_f if liked_count != 0
+
+          similarity
+        end        
+
         # Used internally to update the similarity values between this user and all
         # other users. This is called by the background worker.
         def update_similarities_for(user_id)
@@ -152,6 +184,46 @@ module Recommendable
           end
 
           true
+        end        
+
+        def get_weighted_similarities_for_unregistered_user(unregistered_user_id, like_genre_ids, matching_klass, like_weight)
+          unregistered_user_id = unregistered_user_id.to_s
+          unregistered_similarity_set = Recommendable::Helpers::RedisKeyMapper.unregistered_similarity_set_for(unregistered_user_id)
+
+          # Only calculate similarities for users who have rated the items that
+          # this user has rated
+          relevant_user_ids = []
+
+          zsets = like_genre_ids.map do |id|
+            weighted_liked_by_set = Recommendable::Helpers::RedisKeyMapper.weighted_liked_by_set_for(matching_klass, id)
+
+            weighted_liked_by_set
+          end
+
+          unregistered_zunion_temp_zset = Recommendable::Helpers::RedisKeyMapper.unregistered_zinter_temp_set_for(matching_klass, unregistered_user_id)
+          Recommendable.redis.zunionstore(unregistered_zunion_temp_zset, zsets)
+          relevant_user_ids = Recommendable.redis.zrange(unregistered_zunion_temp_zset, 0, -1)
+          Recommendable.redis.del(unregistered_zunion_temp_zset)
+
+          relevant_user_ids.each do |id|
+            Recommendable.redis.zadd(unregistered_similarity_set, weighted_similarity_between_for_unregistered(unregistered_user_id, like_genre_ids, matching_klass, like_weight, id), id)
+          end
+
+          if knn = Recommendable.config.nearest_neighbors
+            length = Recommendable.redis.zcard(similarity_set)
+            kfn = Recommendable.config.furthest_neighbors || 0
+
+            Recommendable.redis.zremrangebyrank(similarity_set, kfn, length - knn - 1)
+          end
+
+          max_count = 10
+          offset = 0
+          ids_with_score = Recommendable.redis.zrevrange(unregistered_similarity_set, offset, max_count-1, :with_scores => true)
+          Recommendable.redis.del(unregistered_similarity_set)
+
+          trans_ids_with_score = ids_with_score.transpose
+          trans_ids_with_score[0] = Recommendable.query(Recommendable.config.user_class, trans_ids_with_score[0]).sort_by { |user| trans_ids_with_score[0].index(user.id.to_s) }
+          trans_ids_with_score.transpose
         end        
 
         # Used internally to update this user's prediction values across all

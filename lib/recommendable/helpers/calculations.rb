@@ -81,17 +81,17 @@ module Recommendable
           end
 
           other_weighted_liked_zset = Recommendable::Helpers::RedisKeyMapper.weighted_liked_set_for(matching_klass, other_user_id)
-          zinter_temp_zset = Recommendable::Helpers::RedisKeyMapper.zinter_temp_set_for(matching_klass, unregistered_user_id)
+          unregistered_zinter_temp_zset = Recommendable::Helpers::RedisKeyMapper.zinter_temp_set_for(matching_klass, unregistered_user_id)
 
           # Agreements
-          Recommendable.redis.zinterstore(zinter_temp_zset, [unregistered_weighted_liked_zset, other_weighted_liked_zset], :aggregate => "sum")
-          common_ids_with_score = Recommendable.redis.zrange(zinter_temp_zset, 0, -1, :with_scores => true)
+          Recommendable.redis.zinterstore(unregistered_zinter_temp_zset, [unregistered_weighted_liked_zset, other_weighted_liked_zset], :aggregate => "sum")
+          common_ids_with_score = Recommendable.redis.zrange(unregistered_zinter_temp_zset, 0, -1, :with_scores => true)
 
           genre_similarity = common_ids_with_score.inject(0){|sum, id_with_score| sum + (id_with_score[1].to_f / 2.0)} * genre_type_weight
 
           liked_count = Recommendable.redis.zcard(unregistered_weighted_liked_zset) * Recommendable.config.chara_fever_max_weight
 
-          Recommendable.redis.del(zinter_temp_zset)
+          Recommendable.redis.del(unregistered_zinter_temp_zset)
           Recommendable.redis.del(unregistered_weighted_liked_zset)
 
           similarity += genre_similarity / liked_count.to_f if liked_count != 0
@@ -160,7 +160,7 @@ module Recommendable
                 weighted_liked_by_set
               end
 
-              zunion_temp_zset = Recommendable::Helpers::RedisKeyMapper.zinter_temp_set_for(klass, user_id)
+              zunion_temp_zset = Recommendable::Helpers::RedisKeyMapper.zunion_temp_set_for(klass, user_id)
               Recommendable.redis.zunionstore(zunion_temp_zset, zsets)
               zunion_set = Recommendable.redis.zrange(zunion_temp_zset, 0, -1)
               Recommendable.redis.del(zunion_temp_zset)
@@ -200,7 +200,7 @@ module Recommendable
             weighted_liked_by_set
           end
 
-          unregistered_zunion_temp_zset = Recommendable::Helpers::RedisKeyMapper.unregistered_zinter_temp_set_for(matching_klass, unregistered_user_id)
+          unregistered_zunion_temp_zset = Recommendable::Helpers::RedisKeyMapper.unregistered_zunion_temp_set_for(matching_klass, unregistered_user_id)
           Recommendable.redis.zunionstore(unregistered_zunion_temp_zset, zsets)
           relevant_user_ids = Recommendable.redis.zrange(unregistered_zunion_temp_zset, 0, -1)
           Recommendable.redis.del(unregistered_zunion_temp_zset)

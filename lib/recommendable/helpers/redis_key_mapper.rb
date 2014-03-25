@@ -52,6 +52,10 @@ module Recommendable
           [redis_namespace, ratable_namespace(klass), id, 'unregistered_zinter_temp'].compact.join(':')
         end 
 
+        def unregistered_zunion_temp_set_for(klass, id)
+          [redis_namespace, ratable_namespace(klass), id, 'unregistered_zunion_temp'].compact.join(':')
+        end 
+
         private
 
         def redis_namespace

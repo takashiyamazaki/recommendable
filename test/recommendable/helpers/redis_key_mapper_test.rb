@@ -123,4 +123,7 @@ class RedisKeyMapperTest < MiniTest::Unit::TestCase
     assert_equal Recommendable::Helpers::RedisKeyMapper.unregistered_zinter_temp_set_for(Movie, 1), 'recommendable:movies:1:unregistered_zinter_temp'
   end
   
+  def test_output_of_unregistered_zunion_temp_set_for
+    assert_equal Recommendable::Helpers::RedisKeyMapper.unregistered_zunion_temp_set_for(Movie, 1), 'recommendable:movies:1:unregistered_zunion_temp'
+  end
 end

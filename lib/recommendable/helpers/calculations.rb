@@ -186,7 +186,7 @@ module Recommendable
           true
         end        
 
-        def get_weighted_similarities_for_unregistered_user(unregistered_user_id, like_genre_ids, matching_klass, like_weight)
+        def get_weighted_similarities_for_unregistered_user(unregistered_user_id, like_genre_ids, user_klass, matching_klass, like_weight)
           unregistered_user_id = unregistered_user_id.to_s
           unregistered_similarity_set = Recommendable::Helpers::RedisKeyMapper.unregistered_similarity_set_for(unregistered_user_id)
 

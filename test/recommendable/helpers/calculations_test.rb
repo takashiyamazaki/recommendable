@@ -200,7 +200,7 @@ class CalculationsTest < MiniTest::Unit::TestCase
     [@movie1, @movie2, @movie3, @book1].each { |obj| @like_user4.weighted_like(obj, 0.5) }
     [@movie1, @movie2, @movie3, @book1].each { |obj| @like_user5.weighted_like(obj, 0.1) }
 
-    result = Recommendable::Helpers::Calculations.get_weighted_similarities_for_unregistered_user(9999, [@movie1.id, @movie2.id], Movie, 0.5)
+    result = Recommendable::Helpers::Calculations.get_weighted_similarities_for_unregistered_user(9999, [@movie1.id, @movie2.id], User, Movie, 0.5)
     assert_includes result , [@like_user1, 7.5]
     assert_includes result , [@like_user2, 7.5]
     assert_includes result , [@like_user3, 3.75]

@@ -8,6 +8,7 @@ class CalculationsTest < MiniTest::Unit::TestCase
     5.times { |x| instance_variable_set(:"@movie#{x+1}", Factory(:movie)) }
     5.upto(9) { |x| instance_variable_set(:"@movie#{x+1}", Factory(:documentary)) }
     10.times { |x| instance_variable_set(:"@book#{x+1}",  Factory(:book))  }
+    10.times { |x| instance_variable_set(:"@car#{x+1}",  Factory(:car))  }
 
     [@movie1, @movie2, @movie3, @book4, @book5, @book6].each { |obj| @user.like(obj) }
     [@book1, @book2, @book3, @movie4, @movie5, @movie6].each { |obj| @user.dislike(obj) }
@@ -206,6 +207,58 @@ class CalculationsTest < MiniTest::Unit::TestCase
     assert_includes result , [@like_user3, 3.75]
     assert_includes result , [@like_user4, 5]
     assert_includes result , [@like_user5, 3]
+  end
+
+  def test_each_genre_weighting_cross_similarity_between_calculates_crrectly_single_case
+    # custom user for weight
+    @weight_user = Factory(:user)
+    [@movie1, @movie2, @movie3].each { |obj| @weight_user.weighted_like(obj, 1.0) }
+    # custom like_user
+    5.times  { |x| instance_variable_set(:"@like_user#{x+1}",  Factory(:user))  }
+    [@movie1, @movie2, @movie3].each { |obj| @like_user1.weighted_like(obj, 1.0) }
+    [@movie1, @movie2].each { |obj| @like_user2.weighted_like(obj, 1.0) }
+    [@movie1].each { |obj| @like_user3.weighted_like(obj, 1.0) }
+    [@movie1, @movie2, @movie3].each { |obj| @like_user4.weighted_like(obj, 0.5) }
+    [@movie1, @movie2, @movie3].each { |obj| @like_user5.weighted_like(obj, 0.1) }
+
+    assert_equal Recommendable::Helpers::Calculations.weighted_cross_similarity_between(@weight_user.id, @like_user1.id), 1.0
+    assert_equal Recommendable::Helpers::Calculations.weighted_cross_similarity_between(@weight_user.id, @like_user2.id), 0.6666666666666666
+    assert_equal Recommendable::Helpers::Calculations.weighted_cross_similarity_between(@weight_user.id, @like_user3.id), 0.3333333333333333
+    assert_equal Recommendable::Helpers::Calculations.weighted_cross_similarity_between(@weight_user.id, @like_user4.id), 0.75
+    assert_equal Recommendable::Helpers::Calculations.weighted_cross_similarity_between(@weight_user.id, @like_user5.id), 0.55
+  end
+
+  # 別のモデル同士の掛け合わせを追加
+  def test_each_genre_weighting_cross_similarity_between_calculates_crrectly_multi_case
+    # reset genre_type_weights
+    Recommendable.config.genre_type_weights = {
+      Book_Book:1,
+      Book_Car:2,
+      Book_Movie:1,
+      Car_Book:1,
+      Car_Car:3,
+      Car_Movie:1,
+      Movie_Book:1,
+      Movie_Car:1,
+      Movie_Movie:1
+    }
+    # custom user for weight
+    @car1.id = @book1.id =100 
+    @weight_user = Factory(:user)
+    [@movie1, @movie2, @movie3, @book1, @book2, @car2].each { |obj| @weight_user.weighted_like(obj, 1.0) }
+    # custom like_user
+    5.times  { |x| instance_variable_set(:"@like_user#{x+1}",  Factory(:user))  }
+    [@movie1, @movie2, @movie3, @book1, @book2].each { |obj| @like_user1.weighted_like(obj, 1.0) }
+    [@movie1, @movie2, @book1].each { |obj| @like_user2.weighted_like(obj, 1.0) }
+    [@movie1, @book1].each { |obj| @like_user3.weighted_like(obj, 1.0) }
+    [@movie1, @movie2, @movie3, @book1, @car1].each { |obj| @like_user4.weighted_like(obj, 0.5) }
+    [@movie1, @movie2, @movie3, @book1, @car2].each { |obj| @like_user5.weighted_like(obj, 0.1) }
+
+    assert_equal Recommendable::Helpers::Calculations.weighted_cross_similarity_between(@weight_user.id, @like_user1.id), 2.0
+    assert_equal Recommendable::Helpers::Calculations.weighted_cross_similarity_between(@weight_user.id, @like_user2.id), 1.1666666666666665
+    assert_equal Recommendable::Helpers::Calculations.weighted_cross_similarity_between(@weight_user.id, @like_user3.id), 0.8333333333333333
+    assert_equal Recommendable::Helpers::Calculations.weighted_cross_similarity_between(@weight_user.id, @like_user4.id), 1.875
+    assert_equal Recommendable::Helpers::Calculations.weighted_cross_similarity_between(@weight_user.id, @like_user5.id), 2.475
   end
 
   def teardown
